@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>中文转日语假名拟音</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700&family=Zen+Maru+Gothic:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.18.2/dist/index.js"></script>
+    <script defer src="./script.js"></script>
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <p class="eyebrow">Mandarin Sound Sketch</p>
+        <h1>中文转日语假名拟音</h1>
+        <p class="hero-copy">
+          输入一句中文，页面会先取普通话拼音，再生成尽量贴近日语发音体系的片假名和平假名版本。
+        </p>
+      </header>
+
+      <main class="layout">
+        <section class="panel input-panel">
+          <div class="panel-head">
+            <h2>输入中文</h2>
+            <div class="sample-row">
+              <button class="sample-chip" type="button" data-sample="我不想上学">我不想上学</button>
+              <button class="sample-chip" type="button" data-sample="今天真的好累">今天真的好累</button>
+              <button class="sample-chip" type="button" data-sample="欢迎来到我的频道">欢迎来到我的频道</button>
+            </div>
+          </div>
+
+          <label class="input-label" for="sourceText">中文原句</label>
+          <textarea
+            id="sourceText"
+            rows="6"
+            placeholder="例如：我不想上学"
+          >我不想上学</textarea>
+
+          <div class="actions">
+            <button id="convertButton" class="primary-button" type="button">生成拟音</button>
+            <button id="copyKatakanaButton" class="ghost-button" type="button">复制片假名</button>
+            <button id="copyHiraganaButton" class="ghost-button" type="button">复制平假名</button>
+          </div>
+
+          <p id="statusMessage" class="status-message" aria-live="polite"></p>
+        </section>
+
+        <section class="panel results-panel">
+          <div class="panel-head">
+            <h2>拟音结果</h2>
+            <p class="panel-note">这是为了“听起来像中文”的近似写法，不包含声调，也不会和普通话完全一致。</p>
+          </div>
+
+          <div class="result-stack">
+            <article class="result-card">
+              <span class="result-label">拼音</span>
+              <p id="pinyinOutput" class="result-text"></p>
+            </article>
+
+            <article class="result-card">
+              <span class="result-label">片假名</span>
+              <p id="katakanaOutput" class="result-text kana-text"></p>
+            </article>
+
+            <article class="result-card">
+              <span class="result-label">平假名</span>
+              <p id="hiraganaOutput" class="result-text kana-text"></p>
+            </article>
+          </div>
+        </section>
+
+        <section class="panel detail-panel">
+          <div class="panel-head">
+            <h2>逐字对照</h2>
+            <p class="panel-note">方便你调整用字，看看每个汉字被拟成了什么假名。</p>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>汉字</th>
+                  <th>拼音</th>
+                  <th>片假名</th>
+                  <th>平假名</th>
+                </tr>
+              </thead>
+              <tbody id="detailTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
