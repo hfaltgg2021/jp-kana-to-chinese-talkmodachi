@@ -15,6 +15,9 @@ const katakanaReference = document.querySelector("#katakanaReference");
 const copyToast = document.querySelector("#copyToast");
 const sampleButtons = document.querySelectorAll("[data-sample]");
 
+const VOICEVOX_BASE_URL = "https://tts.537428.xyz";
+const VOICEVOX_SPEAKER = 1;
+
 const hanRunRegex = /[\p{Script=Han}]+/gu;
 const punctuationRegex = /^[，。！？；：、,.!?;:）》】」』]$/;
 
@@ -181,6 +184,8 @@ const ttsState = {
   voice: null,
   isSpeaking: false,
   activeButton: null,
+  audio: null,
+  audioUrl: null,
 };
 
 let toastTimerId = null;
@@ -210,6 +215,18 @@ function showToast(message) {
   toastTimerId = window.setTimeout(() => {
     copyToast.classList.remove("visible");
   }, 1500);
+}
+
+function cleanupVoicevoxAudio() {
+  if (ttsState.audio) {
+    ttsState.audio.pause();
+    ttsState.audio = null;
+  }
+
+  if (ttsState.audioUrl) {
+    URL.revokeObjectURL(ttsState.audioUrl);
+    ttsState.audioUrl = null;
+  }
 }
 
 async function copyText(value, successMessage, failureMessage) {
@@ -260,8 +277,12 @@ function getJapaneseVoice() {
 function refreshVoiceState() {
   if (!("speechSynthesis" in window) || typeof window.SpeechSynthesisUtterance !== "function") {
     ttsState.voice = null;
-    setSpeechButtonsEnabled(false);
-    setTtsStatus("当前浏览器不支持语音朗读。", true);
+    setSpeechButtonsEnabled(Boolean(VOICEVOX_BASE_URL));
+    if (VOICEVOX_BASE_URL) {
+      setTtsStatus("浏览器本地朗读不可用，将优先尝试 VOICEVOX 远端朗读。");
+    } else {
+      setTtsStatus("当前浏览器不支持语音朗读。", true);
+    }
     return;
   }
 
@@ -509,10 +530,86 @@ async function copyResult(element, label) {
   await copyText(value, "复制成功", `复制${label}失败，请手动复制。`);
 }
 
-function speakKana(text, button, label) {
+async function speakWithVoicevox(text, button, label) {
+  const audioQueryUrl = new URL("/audio_query", VOICEVOX_BASE_URL);
+  audioQueryUrl.searchParams.set("text", text);
+  audioQueryUrl.searchParams.set("speaker", String(VOICEVOX_SPEAKER));
+
+  const audioQueryResponse = await fetch(audioQueryUrl, {
+    method: "POST",
+  });
+
+  if (!audioQueryResponse.ok) {
+    throw new Error(`audio_query failed: ${audioQueryResponse.status}`);
+  }
+
+  const audioQuery = await audioQueryResponse.json();
+
+  const synthesisUrl = new URL("/synthesis", VOICEVOX_BASE_URL);
+  synthesisUrl.searchParams.set("speaker", String(VOICEVOX_SPEAKER));
+
+  const synthesisResponse = await fetch(synthesisUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(audioQuery),
+  });
+
+  if (!synthesisResponse.ok) {
+    throw new Error(`synthesis failed: ${synthesisResponse.status}`);
+  }
+
+  const audioBlob = await synthesisResponse.blob();
+  cleanupVoicevoxAudio();
+
+  const audioUrl = URL.createObjectURL(audioBlob);
+  const audio = new Audio(audioUrl);
+  ttsState.audio = audio;
+  ttsState.audioUrl = audioUrl;
+
+  audio.onplay = () => {
+    ttsState.isSpeaking = true;
+    setActiveSpeechButton(button);
+    setTtsStatus(`正在使用 VOICEVOX 播放${label}...`);
+  };
+
+  audio.onended = () => {
+    ttsState.isSpeaking = false;
+    setActiveSpeechButton(null);
+    cleanupVoicevoxAudio();
+    setTtsStatus("VOICEVOX 远端朗读完成。");
+  };
+
+  audio.onerror = () => {
+    ttsState.isSpeaking = false;
+    setActiveSpeechButton(null);
+    cleanupVoicevoxAudio();
+    setTtsStatus("VOICEVOX 音频播放失败，将尝试浏览器本地朗读。", true);
+  };
+
+  await audio.play();
+}
+
+async function speakKana(text, button, label) {
   if (!text.trim()) {
     setTtsStatus("当前没有可朗读的内容。", true);
     return;
+  }
+
+  cleanupVoicevoxAudio();
+
+  if (VOICEVOX_BASE_URL) {
+    try {
+      if ("speechSynthesis" in window && (window.speechSynthesis.speaking || window.speechSynthesis.pending)) {
+        window.speechSynthesis.cancel();
+      }
+
+      await speakWithVoicevox(text, button, label);
+      return;
+    } catch (error) {
+      setTtsStatus("VOICEVOX 不可用，已切换到浏览器本地朗读。", true);
+    }
   }
 
   refreshVoiceState();
@@ -656,19 +753,19 @@ speakHiraganaButton.dataset.defaultLabel = speakHiraganaButton.textContent.trim(
 convertButton.addEventListener("click", convertText);
 
 copyKatakanaButton.addEventListener("click", () => {
-  copyResult(katakanaOutput, "片假名");
+  void copyResult(katakanaOutput, "片假名");
 });
 
 copyHiraganaButton.addEventListener("click", () => {
-  copyResult(hiraganaOutput, "平假名");
+  void copyResult(hiraganaOutput, "平假名");
 });
 
 speakKatakanaButton.addEventListener("click", () => {
-  speakKana(katakanaOutput.value, speakKatakanaButton, "片假名");
+  void speakKana(katakanaOutput.value, speakKatakanaButton, "片假名");
 });
 
 speakHiraganaButton.addEventListener("click", () => {
-  speakKana(hiraganaOutput.value, speakHiraganaButton, "平假名");
+  void speakKana(hiraganaOutput.value, speakHiraganaButton, "平假名");
 });
 
 sourceText.addEventListener("keydown", (event) => {
