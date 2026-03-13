@@ -57,6 +57,11 @@
             <p class="panel-note">这是为了“听起来像中文”的近似写法，不包含声调，也不会和普通话完全一致。</p>
           </div>
 
+          <p id="ttsStatusMessage" class="status-message tts-status-message" aria-live="polite">
+            正在加载日语语音...
+          </p>
+          <p class="panel-note edit-note">下面两个假名结果可以直接修改，重新生成时会覆盖当前内容。</p>
+
           <div class="result-stack">
             <article class="result-card">
               <span class="result-label">拼音</span>
@@ -64,13 +69,33 @@
             </article>
 
             <article class="result-card">
-              <span class="result-label">片假名</span>
-              <p id="katakanaOutput" class="result-text kana-text"></p>
+              <div class="result-card-head">
+                <span class="result-label">片假名</span>
+                <button id="speakKatakanaButton" class="ghost-button speech-button" type="button" disabled>
+                  播放片假名
+                </button>
+              </div>
+              <textarea
+                id="katakanaOutput"
+                class="result-text kana-text kana-editor"
+                rows="3"
+                placeholder="这里会显示可编辑的片假名结果"
+              ></textarea>
             </article>
 
             <article class="result-card">
-              <span class="result-label">平假名</span>
-              <p id="hiraganaOutput" class="result-text kana-text"></p>
+              <div class="result-card-head">
+                <span class="result-label">平假名</span>
+                <button id="speakHiraganaButton" class="ghost-button speech-button" type="button" disabled>
+                  播放平假名
+                </button>
+              </div>
+              <textarea
+                id="hiraganaOutput"
+                class="result-text kana-text kana-editor"
+                rows="3"
+                placeholder="这里会显示可编辑的平假名结果"
+              ></textarea>
             </article>
           </div>
         </section>
@@ -93,6 +118,29 @@
               </thead>
               <tbody id="detailTableBody"></tbody>
             </table>
+          </div>
+        </section>
+
+        <section class="panel detail-panel kana-reference-panel">
+          <div class="panel-head">
+            <h2>假名参考表</h2>
+            <p class="panel-note">不会打假名也没关系，直接点击下方字符就能复制，拿去粘贴到上面的结果框里。</p>
+          </div>
+
+          <div class="kana-reference-grid">
+            <article class="kana-reference-card">
+              <div class="result-card-head">
+                <span class="result-label">平假名参考表</span>
+              </div>
+              <div id="hiraganaReference" class="kana-reference-sections"></div>
+            </article>
+
+            <article class="kana-reference-card">
+              <div class="result-card-head">
+                <span class="result-label">片假名参考表</span>
+              </div>
+              <div id="katakanaReference" class="kana-reference-sections"></div>
+            </article>
           </div>
         </section>
       </main>

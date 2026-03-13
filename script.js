@@ -2,11 +2,16 @@ const sourceText = document.querySelector("#sourceText");
 const convertButton = document.querySelector("#convertButton");
 const copyKatakanaButton = document.querySelector("#copyKatakanaButton");
 const copyHiraganaButton = document.querySelector("#copyHiraganaButton");
+const speakKatakanaButton = document.querySelector("#speakKatakanaButton");
+const speakHiraganaButton = document.querySelector("#speakHiraganaButton");
 const pinyinOutput = document.querySelector("#pinyinOutput");
 const katakanaOutput = document.querySelector("#katakanaOutput");
 const hiraganaOutput = document.querySelector("#hiraganaOutput");
 const detailTableBody = document.querySelector("#detailTableBody");
 const statusMessage = document.querySelector("#statusMessage");
+const ttsStatusMessage = document.querySelector("#ttsStatusMessage");
+const hiraganaReference = document.querySelector("#hiraganaReference");
+const katakanaReference = document.querySelector("#katakanaReference");
 const sampleButtons = document.querySelectorAll("[data-sample]");
 
 const hanRunRegex = /[\p{Script=Han}]+/gu;
@@ -112,9 +117,145 @@ const COMPOSITION_RULES = [
   { finals: ["o"], vowel: "o", suffix: "" },
 ];
 
+const KANA_REFERENCE_SECTIONS = [
+  {
+    title: "基础音",
+    headers: ["a", "i", "u", "e", "o"],
+    rows: [
+      { label: "", hira: ["あ", "い", "う", "え", "お"], kata: ["ア", "イ", "ウ", "エ", "オ"] },
+      { label: "k", hira: ["か", "き", "く", "け", "こ"], kata: ["カ", "キ", "ク", "ケ", "コ"] },
+      { label: "s", hira: ["さ", "し", "す", "せ", "そ"], kata: ["サ", "シ", "ス", "セ", "ソ"] },
+      { label: "t", hira: ["た", "ち", "つ", "て", "と"], kata: ["タ", "チ", "ツ", "テ", "ト"] },
+      { label: "n", hira: ["な", "に", "ぬ", "ね", "の"], kata: ["ナ", "ニ", "ヌ", "ネ", "ノ"] },
+      { label: "h", hira: ["は", "ひ", "ふ", "へ", "ほ"], kata: ["ハ", "ヒ", "フ", "ヘ", "ホ"] },
+      { label: "m", hira: ["ま", "み", "む", "め", "も"], kata: ["マ", "ミ", "ム", "メ", "モ"] },
+      { label: "y", hira: ["や", "", "ゆ", "", "よ"], kata: ["ヤ", "", "ユ", "", "ヨ"] },
+      { label: "r", hira: ["ら", "り", "る", "れ", "ろ"], kata: ["ラ", "リ", "ル", "レ", "ロ"] },
+      { label: "w", hira: ["わ", "", "", "", "を"], kata: ["ワ", "", "", "", "ヲ"] },
+      { label: "n", hira: ["", "", "ん", "", ""], kata: ["", "", "ン", "", ""] },
+    ],
+  },
+  {
+    title: "浊音与半浊音",
+    headers: ["a", "i", "u", "e", "o"],
+    rows: [
+      { label: "g", hira: ["が", "ぎ", "ぐ", "げ", "ご"], kata: ["ガ", "ギ", "グ", "ゲ", "ゴ"] },
+      { label: "z", hira: ["ざ", "じ", "ず", "ぜ", "ぞ"], kata: ["ザ", "ジ", "ズ", "ゼ", "ゾ"] },
+      { label: "d", hira: ["だ", "ぢ", "づ", "で", "ど"], kata: ["ダ", "ヂ", "ヅ", "デ", "ド"] },
+      { label: "b", hira: ["ば", "び", "ぶ", "べ", "ぼ"], kata: ["バ", "ビ", "ブ", "ベ", "ボ"] },
+      { label: "p", hira: ["ぱ", "ぴ", "ぷ", "ぺ", "ぽ"], kata: ["パ", "ピ", "プ", "ペ", "ポ"] },
+    ],
+  },
+  {
+    title: "拗音",
+    headers: ["ya", "yu", "yo"],
+    rows: [
+      { label: "ky", hira: ["きゃ", "きゅ", "きょ"], kata: ["キャ", "キュ", "キョ"] },
+      { label: "sh", hira: ["しゃ", "しゅ", "しょ"], kata: ["シャ", "シュ", "ショ"] },
+      { label: "ch", hira: ["ちゃ", "ちゅ", "ちょ"], kata: ["チャ", "チュ", "チョ"] },
+      { label: "ny", hira: ["にゃ", "にゅ", "にょ"], kata: ["ニャ", "ニュ", "ニョ"] },
+      { label: "hy", hira: ["ひゃ", "ひゅ", "ひょ"], kata: ["ヒャ", "ヒュ", "ヒョ"] },
+      { label: "my", hira: ["みゃ", "みゅ", "みょ"], kata: ["ミャ", "ミュ", "ミョ"] },
+      { label: "ry", hira: ["りゃ", "りゅ", "りょ"], kata: ["リャ", "リュ", "リョ"] },
+      { label: "gy", hira: ["ぎゃ", "ぎゅ", "ぎょ"], kata: ["ギャ", "ギュ", "ギョ"] },
+      { label: "j", hira: ["じゃ", "じゅ", "じょ"], kata: ["ジャ", "ジュ", "ジョ"] },
+      { label: "by", hira: ["びゃ", "びゅ", "びょ"], kata: ["ビャ", "ビュ", "ビョ"] },
+      { label: "py", hira: ["ぴゃ", "ぴゅ", "ぴょ"], kata: ["ピャ", "ピュ", "ピョ"] },
+    ],
+  },
+  {
+    title: "常用小假名",
+    headers: ["a", "i", "u", "e", "o", "ya", "yu", "yo", "tsu", "wa", "ka", "ke"],
+    rows: [
+      {
+        label: "small",
+        hira: ["ぁ", "ぃ", "ぅ", "ぇ", "ぉ", "ゃ", "ゅ", "ょ", "っ", "ゎ", "ゕ", "ゖ"],
+        kata: ["ァ", "ィ", "ゥ", "ェ", "ォ", "ャ", "ュ", "ョ", "ッ", "ヮ", "ヵ", "ヶ"],
+      },
+    ],
+  },
+];
+
+const ttsState = {
+  voice: null,
+  isSpeaking: false,
+  activeButton: null,
+};
+
 function setStatus(message, isError = false) {
   statusMessage.textContent = message;
   statusMessage.style.color = isError ? "#8a2418" : "";
+}
+
+function setTtsStatus(message, isError = false) {
+  ttsStatusMessage.textContent = message;
+  ttsStatusMessage.style.color = isError ? "#8a2418" : "";
+}
+
+async function copyText(value, successMessage, failureMessage) {
+  try {
+    await navigator.clipboard.writeText(value);
+    setStatus(successMessage);
+  } catch (error) {
+    setStatus(failureMessage, true);
+  }
+}
+
+function setSpeechButtonsEnabled(isEnabled) {
+  speakKatakanaButton.disabled = !isEnabled;
+  speakHiraganaButton.disabled = !isEnabled;
+}
+
+function setActiveSpeechButton(button) {
+  [speakKatakanaButton, speakHiraganaButton].forEach((item) => {
+    if (!item) {
+      return;
+    }
+
+    item.textContent = item.dataset.defaultLabel || item.textContent;
+    item.dataset.playing = "false";
+  });
+
+  ttsState.activeButton = button || null;
+
+  if (button) {
+    button.textContent = "正在播放...";
+    button.dataset.playing = "true";
+  }
+}
+
+function getJapaneseVoice() {
+  if (!("speechSynthesis" in window)) {
+    return null;
+  }
+
+  const voices = window.speechSynthesis.getVoices();
+  return (
+    voices.find((voice) => /^ja[-_]?jp$/i.test(voice.lang)) ||
+    voices.find((voice) => voice.lang.toLowerCase().startsWith("ja")) ||
+    null
+  );
+}
+
+function refreshVoiceState() {
+  if (!("speechSynthesis" in window) || typeof window.SpeechSynthesisUtterance !== "function") {
+    ttsState.voice = null;
+    setSpeechButtonsEnabled(false);
+    setTtsStatus("当前浏览器不支持语音朗读。", true);
+    return;
+  }
+
+  const japaneseVoice = getJapaneseVoice();
+  ttsState.voice = japaneseVoice;
+
+  if (japaneseVoice) {
+    setSpeechButtonsEnabled(true);
+    setTtsStatus("已找到日语语音，可以播放。");
+    return;
+  }
+
+  setSpeechButtonsEnabled(false);
+  setTtsStatus("未检测到日语语音，请安装系统日语语音包。", true);
 }
 
 function detectInitial(syllable) {
@@ -315,8 +456,8 @@ function convertText() {
 
   if (!text) {
     pinyinOutput.textContent = "";
-    katakanaOutput.textContent = "";
-    hiraganaOutput.textContent = "";
+    katakanaOutput.value = "";
+    hiraganaOutput.value = "";
     renderTable([]);
     setStatus("先输入一句中文。");
     return;
@@ -326,8 +467,8 @@ function convertText() {
   const hanSegments = segments.filter((segment) => segment.type === "han");
 
   pinyinOutput.textContent = formatOutput(segments, "pinyin");
-  katakanaOutput.textContent = formatOutput(segments, "katakana");
-  hiraganaOutput.textContent = formatOutput(segments, "hiragana");
+  katakanaOutput.value = formatOutput(segments, "katakana");
+  hiraganaOutput.value = formatOutput(segments, "hiragana");
   renderTable(segments);
 
   if (!hanSegments.length) {
@@ -339,19 +480,140 @@ function convertText() {
 }
 
 async function copyResult(element, label) {
-  const value = element.textContent.trim();
+  const value = (typeof element.value === "string" ? element.value : element.textContent).trim();
   if (!value) {
     setStatus(`还没有可复制的${label}。`, true);
     return;
   }
 
-  try {
-    await navigator.clipboard.writeText(value);
-    setStatus(`${label}已复制到剪贴板。`);
-  } catch (error) {
-    setStatus(`复制${label}失败，请手动复制。`, true);
-  }
+  await copyText(value, `${label}已复制到剪贴板。`, `复制${label}失败，请手动复制。`);
 }
+
+function speakKana(text, button, label) {
+  if (!text.trim()) {
+    setTtsStatus("当前没有可朗读的内容。", true);
+    return;
+  }
+
+  if (!ttsState.voice) {
+    refreshVoiceState();
+    if (!ttsState.voice) {
+      return;
+    }
+  }
+
+  const utterance = new window.SpeechSynthesisUtterance(text);
+  utterance.lang = "ja-JP";
+  utterance.voice = ttsState.voice;
+  utterance.rate = 0.9;
+  utterance.pitch = 1.0;
+  utterance.volume = 1.0;
+
+  utterance.onstart = () => {
+    ttsState.isSpeaking = true;
+    setActiveSpeechButton(button);
+    setTtsStatus(`正在播放${label}...`);
+  };
+
+  utterance.onend = () => {
+    ttsState.isSpeaking = false;
+    setActiveSpeechButton(null);
+    setTtsStatus("已找到日语语音，可以播放。");
+  };
+
+  utterance.onerror = () => {
+    ttsState.isSpeaking = false;
+    setActiveSpeechButton(null);
+    setTtsStatus("日语朗读失败，请确认浏览器语音权限和语音包状态。", true);
+  };
+
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(utterance);
+}
+
+function buildKanaReferenceSection(section, type) {
+  const headerCells = section.headers
+    .map((header) => `<th scope="col">${header}</th>`)
+    .join("");
+
+  const rowMarkup = section.rows
+    .map((row) => {
+      const chars = row[type];
+      const cells = chars
+        .map((char) => {
+          if (!char) {
+            return '<td><span class="kana-char-empty">-</span></td>';
+          }
+
+          return `
+            <td>
+              <button class="kana-char-button" type="button" data-kana-char="${char}">
+                ${char}
+              </button>
+            </td>
+          `;
+        })
+        .join("");
+
+      return `
+        <tr>
+          <th scope="row" class="row-label">${row.label}</th>
+          ${cells}
+        </tr>
+      `;
+    })
+    .join("");
+
+  return `
+    <section class="kana-reference-section">
+      <h3 class="kana-section-title">${section.title}</h3>
+      <div class="kana-reference-table-wrap">
+        <table class="kana-reference-table">
+          <thead>
+            <tr>
+              <th></th>
+              ${headerCells}
+            </tr>
+          </thead>
+          <tbody>
+            ${rowMarkup}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  `;
+}
+
+function renderKanaReferences() {
+  if (!hiraganaReference || !katakanaReference) {
+    return;
+  }
+
+  hiraganaReference.innerHTML = KANA_REFERENCE_SECTIONS.map((section) =>
+    buildKanaReferenceSection(section, "hira")
+  ).join("");
+
+  katakanaReference.innerHTML = KANA_REFERENCE_SECTIONS.map((section) =>
+    buildKanaReferenceSection(section, "kata")
+  ).join("");
+}
+
+async function handleKanaReferenceClick(event) {
+  const button = event.target.closest("[data-kana-char]");
+  if (!button) {
+    return;
+  }
+
+  const kanaChar = button.dataset.kanaChar;
+  if (!kanaChar) {
+    return;
+  }
+
+  await copyText(kanaChar, `已复制 ${kanaChar}`, `复制 ${kanaChar} 失败，请手动复制。`);
+}
+
+speakKatakanaButton.dataset.defaultLabel = speakKatakanaButton.textContent.trim();
+speakHiraganaButton.dataset.defaultLabel = speakHiraganaButton.textContent.trim();
 
 convertButton.addEventListener("click", convertText);
 
@@ -361,6 +623,14 @@ copyKatakanaButton.addEventListener("click", () => {
 
 copyHiraganaButton.addEventListener("click", () => {
   copyResult(hiraganaOutput, "平假名");
+});
+
+speakKatakanaButton.addEventListener("click", () => {
+  speakKana(katakanaOutput.value, speakKatakanaButton, "片假名");
+});
+
+speakHiraganaButton.addEventListener("click", () => {
+  speakKana(hiraganaOutput.value, speakHiraganaButton, "平假名");
 });
 
 sourceText.addEventListener("keydown", (event) => {
@@ -376,5 +646,18 @@ sampleButtons.forEach((button) => {
   });
 });
 
+hiraganaReference.addEventListener("click", handleKanaReferenceClick);
+katakanaReference.addEventListener("click", handleKanaReferenceClick);
+
+if ("speechSynthesis" in window) {
+  if (typeof window.speechSynthesis.addEventListener === "function") {
+    window.speechSynthesis.addEventListener("voiceschanged", refreshVoiceState);
+  } else {
+    window.speechSynthesis.onvoiceschanged = refreshVoiceState;
+  }
+}
+
 renderTable([]);
+renderKanaReferences();
+refreshVoiceState();
 convertText();
