@@ -229,6 +229,10 @@ function cleanupVoicevoxAudio() {
   }
 }
 
+function normalizeSpeechText(text) {
+  return text.replace(/\s+/g, "").trim();
+}
+
 async function copyText(value, successMessage, failureMessage) {
   try {
     await navigator.clipboard.writeText(value);
@@ -592,7 +596,9 @@ async function speakWithVoicevox(text, button, label) {
 }
 
 async function speakKana(text, button, label) {
-  if (!text.trim()) {
+  const speechText = normalizeSpeechText(text);
+
+  if (!speechText) {
     setTtsStatus("当前没有可朗读的内容。", true);
     return;
   }
@@ -605,7 +611,7 @@ async function speakKana(text, button, label) {
         window.speechSynthesis.cancel();
       }
 
-      await speakWithVoicevox(text, button, label);
+      await speakWithVoicevox(speechText, button, label);
       return;
     } catch (error) {
       setTtsStatus("VOICEVOX 不可用，已切换到浏览器本地朗读。", true);
@@ -619,7 +625,7 @@ async function speakKana(text, button, label) {
     return;
   }
 
-  const utterance = new window.SpeechSynthesisUtterance(text);
+  const utterance = new window.SpeechSynthesisUtterance(speechText);
   utterance.lang = "ja-JP";
   if (ttsState.voice) {
     utterance.voice = ttsState.voice;
