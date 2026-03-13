@@ -51,9 +51,17 @@
             <p class="panel-note">这是为了“听起来像中文”的近似写法，不包含声调，也不会和普通话完全一致。</p>
           </div>
 
-          <p id="ttsStatusMessage" class="status-message tts-status-message" aria-live="polite">
-            正在加载日语语音...
-          </p>
+          <div class="tts-toolbar">
+            <p id="ttsStatusMessage" class="status-message tts-status-message" aria-live="polite">
+              正在加载日语语音...
+            </p>
+            <label class="voicevox-picker" for="voicevoxSpeakerSelect">
+              <span>VOICEVOX 角色</span>
+              <select id="voicevoxSpeakerSelect" class="voicevox-select" disabled>
+                <option value="">加载中...</option>
+              </select>
+            </label>
+          </div>
           <p class="panel-note edit-note">下面两个假名结果可以直接修改，重新生成时会覆盖当前内容。</p>
 
           <div class="result-stack">

@@ -10,13 +10,14 @@ const hiraganaOutput = document.querySelector("#hiraganaOutput");
 const detailTableBody = document.querySelector("#detailTableBody");
 const statusMessage = document.querySelector("#statusMessage");
 const ttsStatusMessage = document.querySelector("#ttsStatusMessage");
+const voicevoxSpeakerSelect = document.querySelector("#voicevoxSpeakerSelect");
 const hiraganaReference = document.querySelector("#hiraganaReference");
 const katakanaReference = document.querySelector("#katakanaReference");
 const copyToast = document.querySelector("#copyToast");
 const sampleButtons = document.querySelectorAll("[data-sample]");
 
 const VOICEVOX_BASE_URL = "https://tts.537428.xyz";
-const VOICEVOX_SPEAKER = 1;
+const DEFAULT_VOICEVOX_SPEAKER = 1;
 
 const hanRunRegex = /[\p{Script=Han}]+/gu;
 const punctuationRegex = /^[，。！？；：、,.!?;:）》】」』]$/;
@@ -186,6 +187,8 @@ const ttsState = {
   activeButton: null,
   audio: null,
   audioUrl: null,
+  voicevoxSpeakerId: DEFAULT_VOICEVOX_SPEAKER,
+  voicevoxSpeakersLoaded: false,
 };
 
 let toastTimerId = null;
@@ -247,6 +250,14 @@ function setSpeechButtonsEnabled(isEnabled) {
   speakHiraganaButton.disabled = !isEnabled;
 }
 
+function setVoicevoxPickerEnabled(isEnabled) {
+  if (!voicevoxSpeakerSelect) {
+    return;
+  }
+
+  voicevoxSpeakerSelect.disabled = !isEnabled;
+}
+
 function setActiveSpeechButton(button) {
   [speakKatakanaButton, speakHiraganaButton].forEach((item) => {
     if (!item) {
@@ -274,8 +285,64 @@ function getJapaneseVoice() {
   return (
     voices.find((voice) => /^ja[-_]?jp$/i.test(voice.lang)) ||
     voices.find((voice) => voice.lang.toLowerCase().startsWith("ja")) ||
-    null
-  );
+      null
+    );
+}
+
+function renderVoicevoxSpeakerOptions(choices) {
+  if (!voicevoxSpeakerSelect) {
+    return;
+  }
+
+  voicevoxSpeakerSelect.innerHTML = "";
+
+  choices.forEach((choice) => {
+    const option = document.createElement("option");
+    option.value = String(choice.id);
+    option.textContent = choice.label;
+    voicevoxSpeakerSelect.append(option);
+  });
+}
+
+async function loadVoicevoxSpeakers() {
+  if (!VOICEVOX_BASE_URL || !voicevoxSpeakerSelect) {
+    return;
+  }
+
+  try {
+    setVoicevoxPickerEnabled(false);
+    renderVoicevoxSpeakerOptions([{ id: "", label: "角色加载中..." }]);
+
+    const speakersUrl = new URL("/speakers", VOICEVOX_BASE_URL);
+    const response = await fetch(speakersUrl);
+    if (!response.ok) {
+      throw new Error(`speakers failed: ${response.status}`);
+    }
+
+    const speakers = await response.json();
+    const choices = speakers.flatMap((speaker) =>
+      speaker.styles.map((style) => ({
+        id: style.id,
+        label: `${speaker.name} - ${style.name}`,
+      }))
+    );
+
+    if (!choices.length) {
+      throw new Error("No VOICEVOX speakers found.");
+    }
+
+    const selectedChoice = choices.find((choice) => choice.id === ttsState.voicevoxSpeakerId) || choices[0];
+    ttsState.voicevoxSpeakerId = selectedChoice.id;
+
+    renderVoicevoxSpeakerOptions(choices);
+    voicevoxSpeakerSelect.value = String(ttsState.voicevoxSpeakerId);
+    setVoicevoxPickerEnabled(true);
+    ttsState.voicevoxSpeakersLoaded = true;
+  } catch (error) {
+    ttsState.voicevoxSpeakersLoaded = false;
+    renderVoicevoxSpeakerOptions([{ id: "", label: "角色加载失败" }]);
+    setVoicevoxPickerEnabled(false);
+  }
 }
 
 function refreshVoiceState() {
@@ -537,7 +604,7 @@ async function copyResult(element, label) {
 async function speakWithVoicevox(text, button, label) {
   const audioQueryUrl = new URL("/audio_query", VOICEVOX_BASE_URL);
   audioQueryUrl.searchParams.set("text", text);
-  audioQueryUrl.searchParams.set("speaker", String(VOICEVOX_SPEAKER));
+  audioQueryUrl.searchParams.set("speaker", String(ttsState.voicevoxSpeakerId));
 
   const audioQueryResponse = await fetch(audioQueryUrl, {
     method: "POST",
@@ -550,7 +617,7 @@ async function speakWithVoicevox(text, button, label) {
   const audioQuery = await audioQueryResponse.json();
 
   const synthesisUrl = new URL("/synthesis", VOICEVOX_BASE_URL);
-  synthesisUrl.searchParams.set("speaker", String(VOICEVOX_SPEAKER));
+  synthesisUrl.searchParams.set("speaker", String(ttsState.voicevoxSpeakerId));
 
   const synthesisResponse = await fetch(synthesisUrl, {
     method: "POST",
@@ -798,7 +865,17 @@ if ("speechSynthesis" in window) {
   }
 }
 
+if (voicevoxSpeakerSelect) {
+  voicevoxSpeakerSelect.addEventListener("change", () => {
+    const nextValue = Number.parseInt(voicevoxSpeakerSelect.value, 10);
+    if (!Number.isNaN(nextValue)) {
+      ttsState.voicevoxSpeakerId = nextValue;
+    }
+  });
+}
+
 renderTable([]);
 renderKanaReferences();
 refreshVoiceState();
+void loadVoicevoxSpeakers();
 convertText();
