@@ -12,6 +12,7 @@ const statusMessage = document.querySelector("#statusMessage");
 const ttsStatusMessage = document.querySelector("#ttsStatusMessage");
 const hiraganaReference = document.querySelector("#hiraganaReference");
 const katakanaReference = document.querySelector("#katakanaReference");
+const copyToast = document.querySelector("#copyToast");
 const sampleButtons = document.querySelectorAll("[data-sample]");
 
 const hanRunRegex = /[\p{Script=Han}]+/gu;
@@ -182,6 +183,8 @@ const ttsState = {
   activeButton: null,
 };
 
+let toastTimerId = null;
+
 function setStatus(message, isError = false) {
   statusMessage.textContent = message;
   statusMessage.style.color = isError ? "#8a2418" : "";
@@ -192,10 +195,27 @@ function setTtsStatus(message, isError = false) {
   ttsStatusMessage.style.color = isError ? "#8a2418" : "";
 }
 
+function showToast(message) {
+  if (!copyToast) {
+    return;
+  }
+
+  copyToast.textContent = message;
+  copyToast.classList.add("visible");
+
+  if (toastTimerId) {
+    window.clearTimeout(toastTimerId);
+  }
+
+  toastTimerId = window.setTimeout(() => {
+    copyToast.classList.remove("visible");
+  }, 1500);
+}
+
 async function copyText(value, successMessage, failureMessage) {
   try {
     await navigator.clipboard.writeText(value);
-    setStatus(successMessage);
+    showToast(successMessage);
   } catch (error) {
     setStatus(failureMessage, true);
   }
@@ -486,7 +506,7 @@ async function copyResult(element, label) {
     return;
   }
 
-  await copyText(value, `${label}已复制到剪贴板。`, `复制${label}失败，请手动复制。`);
+  await copyText(value, "复制成功", `复制${label}失败，请手动复制。`);
 }
 
 function speakKana(text, button, label) {
@@ -532,6 +552,8 @@ function speakKana(text, button, label) {
 }
 
 function buildKanaReferenceSection(section, type) {
+  const tableClassName =
+    section.headers.length > 5 ? "kana-reference-table compact-table" : "kana-reference-table";
   const headerCells = section.headers
     .map((header) => `<th scope="col">${header}</th>`)
     .join("");
@@ -568,7 +590,7 @@ function buildKanaReferenceSection(section, type) {
     <section class="kana-reference-section">
       <h3 class="kana-section-title">${section.title}</h3>
       <div class="kana-reference-table-wrap">
-        <table class="kana-reference-table">
+        <table class="${tableClassName}">
           <thead>
             <tr>
               <th></th>
@@ -609,7 +631,7 @@ async function handleKanaReferenceClick(event) {
     return;
   }
 
-  await copyText(kanaChar, `已复制 ${kanaChar}`, `复制 ${kanaChar} 失败，请手动复制。`);
+  await copyText(kanaChar, "复制成功", `复制 ${kanaChar} 失败，请手动复制。`);
 }
 
 speakKatakanaButton.dataset.defaultLabel = speakKatakanaButton.textContent.trim();

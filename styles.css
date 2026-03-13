@@ -354,7 +354,7 @@ tbody td:nth-child(4) {
 
 .kana-reference-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 18px;
 }
 
@@ -382,13 +382,13 @@ tbody td:nth-child(4) {
 
 .kana-reference-table {
   width: 100%;
-  min-width: 360px;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
 .kana-reference-table th,
 .kana-reference-table td {
-  padding: 8px 6px;
+  padding: 7px 5px;
   border-bottom: 1px solid rgba(84, 56, 42, 0.08);
   text-align: center;
 }
@@ -404,10 +404,24 @@ tbody td:nth-child(4) {
 }
 
 .kana-reference-table .row-label {
-  width: 54px;
+  width: 48px;
   color: var(--muted);
   font-size: 0.82rem;
   text-transform: uppercase;
+}
+
+.kana-reference-table.compact-table th,
+.kana-reference-table.compact-table td {
+  padding: 6px 4px;
+}
+
+.kana-reference-table.compact-table th {
+  font-size: 0.76rem;
+}
+
+.kana-reference-table.compact-table .row-label {
+  width: 44px;
+  font-size: 0.74rem;
 }
 
 .kana-char-button,
@@ -416,7 +430,7 @@ tbody td:nth-child(4) {
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 42px;
+  min-height: 40px;
   border-radius: 12px;
   font: inherit;
 }
@@ -428,6 +442,16 @@ tbody td:nth-child(4) {
   cursor: pointer;
   font-size: 1.08rem;
   transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.compact-table .kana-char-button,
+.compact-table .kana-char-empty {
+  min-height: 36px;
+  border-radius: 10px;
+}
+
+.compact-table .kana-char-button {
+  font-size: 0.96rem;
 }
 
 .kana-char-button:hover,
@@ -443,14 +467,33 @@ tbody td:nth-child(4) {
   background: rgba(84, 56, 42, 0.04);
 }
 
+.copy-toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 20;
+  padding: 12px 16px;
+  border: 1px solid rgba(84, 56, 42, 0.1);
+  border-radius: 14px;
+  background: rgba(45, 36, 29, 0.9);
+  box-shadow: 0 16px 34px rgba(37, 27, 21, 0.18);
+  color: #fff8f4;
+  font-size: 0.95rem;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.copy-toast.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 @media (max-width: 860px) {
   .input-panel,
   .results-panel {
     grid-column: 1 / -1;
-  }
-
-  .kana-reference-grid {
-    grid-template-columns: 1fr;
   }
 
   .panel-head {
@@ -486,5 +529,14 @@ tbody td:nth-child(4) {
 
   .kana-reference-card {
     padding: 16px;
+  }
+
+  .kana-reference-table-wrap {
+    overflow-x: auto;
+  }
+
+  .copy-toast {
+    right: 14px;
+    bottom: 14px;
   }
 }
