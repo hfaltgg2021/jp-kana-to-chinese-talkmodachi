@@ -274,8 +274,8 @@ function refreshVoiceState() {
     return;
   }
 
-  setSpeechButtonsEnabled(false);
-  setTtsStatus("未检测到日语语音，请安装系统日语语音包。", true);
+  setSpeechButtonsEnabled(true);
+  setTtsStatus("未检测到专用日语语音，将尝试使用浏览器默认语音朗读。");
 }
 
 function detectInitial(syllable) {
@@ -515,16 +515,18 @@ function speakKana(text, button, label) {
     return;
   }
 
-  if (!ttsState.voice) {
-    refreshVoiceState();
-    if (!ttsState.voice) {
-      return;
-    }
+  refreshVoiceState();
+
+  if (!("speechSynthesis" in window) || typeof window.SpeechSynthesisUtterance !== "function") {
+    setTtsStatus("当前浏览器不支持语音朗读。", true);
+    return;
   }
 
   const utterance = new window.SpeechSynthesisUtterance(text);
   utterance.lang = "ja-JP";
-  utterance.voice = ttsState.voice;
+  if (ttsState.voice) {
+    utterance.voice = ttsState.voice;
+  }
   utterance.rate = 0.9;
   utterance.pitch = 1.0;
   utterance.volume = 1.0;
@@ -538,17 +540,31 @@ function speakKana(text, button, label) {
   utterance.onend = () => {
     ttsState.isSpeaking = false;
     setActiveSpeechButton(null);
-    setTtsStatus("已找到日语语音，可以播放。");
+    if (ttsState.voice) {
+      setTtsStatus("已找到日语语音，可以播放。");
+    } else {
+      setTtsStatus("已使用浏览器默认语音朗读。");
+    }
   };
 
-  utterance.onerror = () => {
+  utterance.onerror = (event) => {
+    const errorCode = event?.error || "";
+    if (errorCode === "canceled" || errorCode === "interrupted") {
+      return;
+    }
+
     ttsState.isSpeaking = false;
     setActiveSpeechButton(null);
     setTtsStatus("日语朗读失败，请确认浏览器语音权限和语音包状态。", true);
   };
 
-  window.speechSynthesis.cancel();
-  window.speechSynthesis.speak(utterance);
+  if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+    window.speechSynthesis.cancel();
+  }
+
+  window.setTimeout(() => {
+    window.speechSynthesis.speak(utterance);
+  }, 40);
 }
 
 function buildKanaReferenceSection(section, type) {
